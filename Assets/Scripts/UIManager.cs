@@ -32,8 +32,12 @@ public class UIManager : MonoBehaviour
     {
         yield return FileBrowser.WaitForLoadDialog(false, null, "Select Folder", "Select");
         _cpbrtFilePath = FileBrowser.Result;
-        _rootFolder = Directory.GetParent(_cpbrtFilePath).FullName;
-        _parser.Parse(_rootFolder, _cpbrtFilePath);
-        gm.GenerateScene(_parser.rayTracingInfo, _parser.outputInfo);
+        if(_cpbrtFilePath != null)
+        {
+            _rootFolder = Directory.GetParent(_cpbrtFilePath).FullName;
+            _parser.Parse(_rootFolder, _cpbrtFilePath);
+            gm.ClearScene();
+            gm.GenerateScene(_parser.rayTracingInfo, _parser.outputInfo);
+        }
     }
 }

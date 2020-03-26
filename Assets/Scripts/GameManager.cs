@@ -12,8 +12,21 @@ public class GameManager : MonoBehaviour
     public GameObject model;
     public GameObject cone;
 
+    private List<GameObject> _lightObjects = new List<GameObject>();
     private List<GameObject> _objects = new List<GameObject>();
-    
+
+
+    private bool _hidePanel = true;
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            _hidePanel = !_hidePanel;
+            um.gameObject.SetActive(_hidePanel);
+        }
+    }
+
     private void CreateLight(LightType type, Vector3 pos, Vector3 color , Vector3 whrInfo, int samples)
     {
         GameObject lightObj = new GameObject();
@@ -26,12 +39,14 @@ public class GameManager : MonoBehaviour
         {
             lightComp.type = UnityEngine.LightType.Point;
             lightObj.name = "PointLight";
+            _lightObjects.Add(lightObj);
         }
         else if (type == LightType.area)
         {
             lightComp.type = UnityEngine.LightType.Area;
             lightObj.name = "AreaLight";
             lightComp.areaSize = new Vector2(whrInfo.x, whrInfo.y);
+            _lightObjects.Add(lightObj);
         }
         else
             print("Create Light Object Failed!");
@@ -47,6 +62,7 @@ public class GameManager : MonoBehaviour
             //default radius 0.5
             float mult = whrInfo.z / 0.5f;
             obj.transform.localScale = scale * mult;
+            _objects.Add(obj);
 
         }
         else if(otype == ObjectType.cylinder)
@@ -61,7 +77,7 @@ public class GameManager : MonoBehaviour
             //default yminmax +-1 radius 0.5
             float mult = whrInfo.z / 0.5f;
             obj.transform.localScale = new Vector3(scale.x * mult, scale.y * yminmax.y, scale.z * mult);
-
+            _objects.Add(obj);
         }
         else if (otype == ObjectType.cone)
         {
@@ -69,6 +85,7 @@ public class GameManager : MonoBehaviour
             GameObject obj = Instantiate(cone, pos, Quaternion.Euler(rot));
             Vector3 mult = new Vector3(whrInfo.z, whrInfo.y / 2.0f, whrInfo.z);
             obj.transform.localScale = new Vector3(scale.x * mult.x, scale.y * mult.y, scale.z * mult.z);
+            _objects.Add(obj);
         }
         else if (otype == ObjectType.plane)
         {
@@ -78,6 +95,7 @@ public class GameManager : MonoBehaviour
             obj.transform.position = pos;
             obj.transform.eulerAngles = rot;
             obj.transform.localScale = new Vector3(scale.x * mult.x, scale.y, scale.z * mult.z);
+            _objects.Add(obj);
         }
         else if (otype == ObjectType.mesh)
         {
@@ -87,7 +105,18 @@ public class GameManager : MonoBehaviour
             //blender object
             GameObject obj = Instantiate(model, pos, Quaternion.Euler(new Vector3(rot.x, 180, rot.z)));
             obj.transform.localScale = scale;
+            _objects.Add(obj);
         }
+    }
+
+    public void ClearScene()
+    {
+        foreach(GameObject obj in _lightObjects)
+            Destroy(obj);
+        foreach (GameObject obj in _objects)
+            Destroy(obj);
+        _lightObjects.Clear();
+        _objects.Clear();
     }
 
     public void GenerateScene(RayTracingInfo rtInfo, OutputInfo outputInfo)
@@ -117,4 +146,5 @@ public class GameManager : MonoBehaviour
 
         }
     }
+
 }
