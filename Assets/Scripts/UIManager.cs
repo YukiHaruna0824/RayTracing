@@ -1,12 +1,26 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+
+using System.IO;
 using UnityEngine;
 using SimpleFileBrowser;
 
 public class UIManager : MonoBehaviour
 {
-    private string _rootFolder;
-    private Parser _parser = new Parser();
+    [HideInInspector]
+    public string _rootFolder;      //root folder
+
+    [HideInInspector]
+    public string _cpbrtFilePath;       //cpbrtfile
+
+    private Parser _parser;
+
+    public GameManager gm;
+
+    private void Start()
+    {
+        _parser = new Parser();
+    }
 
     public void OpenFileBrowser()
     {
@@ -14,11 +28,12 @@ public class UIManager : MonoBehaviour
         StartCoroutine(ShowLoadDialogCorotine());
     }
 
-
     IEnumerator ShowLoadDialogCorotine()
     {
         yield return FileBrowser.WaitForLoadDialog(false, null, "Select Folder", "Select");
-        _rootFolder = FileBrowser.Result;
-        _parser.Parse(_rootFolder);
+        _cpbrtFilePath = FileBrowser.Result;
+        _rootFolder = Directory.GetParent(_cpbrtFilePath).FullName;
+        _parser.Parse(_rootFolder, _cpbrtFilePath);
+        gm.GenerateScene(_parser.rayTracingInfo, _parser.outputInfo);
     }
 }

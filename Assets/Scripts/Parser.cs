@@ -22,7 +22,14 @@ public class OutputInfo
         Resolution = _resolution;
         ImageName = _imageName;
         Sort = _sort;
-    }    
+    }
+    
+    public void Init()
+    {
+        Resolution = Vector2.zero;
+        ImageName = "";
+        Sort = "";
+    }
 }
 
 public enum ObjectType
@@ -40,25 +47,8 @@ public enum MaterialType
     none, mirror, map, kdks
 }
 
-public class RayTracingObject
+public class MaterialAttribute
 {
-    public ObjectType o_type = ObjectType.none;
-    public LightType l_type = LightType.none;
-    public MaterialType m_type = MaterialType.none;
-
-    public Vector3 pos;
-    public Vector3 rot;
-    public Vector3 scale;
-
-    public float radius;
-    public float width;
-    public float height;
-
-    //for cylinder
-    public float ymin;
-    public float ymax;
-
-    //for kskd
     public Vector3 kd;
     public Vector3 ks;
 
@@ -69,8 +59,39 @@ public class RayTracingObject
     //for mesh
     public string meshName;
 
+    public MaterialAttribute()
+    {
+        kd = Vector3.zero;
+        ks = Vector3.zero;
+        cmapName = "";
+        bmapName = "";
+        meshName = "";
+    }
+}
+
+public class RayTracingObject
+{
+    public ObjectType o_type = ObjectType.none;
+    public LightType l_type = LightType.none;
+
+    public MaterialType m_type = MaterialType.none;
+
+    public Vector3 pos;
+    public Vector3 rot;
+    public Vector3 scale;
+
+    // width, height, radius
+    public Vector3 whrInfo;
+
+    //for cylinder ymin, ymax
+    public Vector2 yminmax;
+
+    // for material attribute
+    public MaterialAttribute mattr;
+
     //for light
     public Vector3 lightColor;
+
     //for area
     public int nsample;
 
@@ -81,17 +102,10 @@ public class RayTracingObject
         m_type = MaterialType.none;
         pos = Vector3.zero;
         rot = Vector3.zero;
-        scale = Vector3.zero;
-        radius = 0;
-        width = 0;
-        height = 0;
-        ymin = 0;
-        ymax = 0;
-        kd = Vector3.zero;
-        ks = Vector3.zero;
-        cmapName = "";
-        bmapName = "";
-        meshName = "";
+        scale = Vector3.one;
+        whrInfo = Vector3.zero;
+        yminmax = Vector2.zero;
+        mattr = new MaterialAttribute();
         lightColor = Vector3.zero;
         nsample = 0;
     }
@@ -113,7 +127,31 @@ public class RayTracingInfo
     public int cameraType;
     public float cameraFov;
 
-    public List<RayTracingObject> objects = new List<RayTracingObject>();
+    public List<RayTracingObject> objects;
+
+    public RayTracingInfo()
+    {
+        sampleMethod = "";
+        sampleCount = 0;
+        cameraPos = Vector3.zero;
+        cameraCenter = Vector3.zero;
+        cameraUp = Vector3.zero;
+        cameraType = 0;
+        cameraFov = 0;
+        objects = new List<RayTracingObject>();
+    }
+
+    public void Init()
+    {
+        sampleMethod = "";
+        sampleCount = 0;
+        cameraPos = Vector3.zero;
+        cameraCenter = Vector3.zero;
+        cameraUp = Vector3.zero;
+        cameraType = 0;
+        cameraFov = 0;
+        objects.Clear();
+    }
 }
 
 public class KeyWord
@@ -148,6 +186,7 @@ public class Parser
     private bool _debug = false;
     private List<string> _records = new List<string>();
     private int _curIndex = 0;
+    private string _rootFolder;
 
     // read cpbrt file
     private bool ReadFile(string filePath)
@@ -280,7 +319,8 @@ public class Parser
             {
                 tokens = line.Split(' ');
                 float mult = float.Parse(tokens[1]);
-                robj.rot = new Vector3(float.Parse(tokens[2]), float.Parse(tokens[3]), float.Parse(tokens[4])) * mult;
+                //blender to unity yz opposite
+                robj.rot = new Vector3(float.Parse(tokens[2]), float.Parse(tokens[4]), float.Parse(tokens[3])) * mult;
             }
             else if (line.StartsWith(KeyWord.K_Scale))
             {
@@ -313,15 +353,15 @@ public class Parser
                         }
                     }
                     else if(token == "\"floatradius\"")
-                        robj.radius = float.Parse(ExtractString(tokens[j + 1]));
+                        robj.whrInfo.z = float.Parse(ExtractString(tokens[j + 1]));
                     else if (token == "\"floatymin\"")
-                        robj.ymin = float.Parse(ExtractString(tokens[j + 1]));
+                        robj.yminmax.x = float.Parse(ExtractString(tokens[j + 1]));
                     else if (token == "\"floatymax\"")
-                        robj.ymax = float.Parse(ExtractString(tokens[j + 1]));
+                        robj.yminmax.y = float.Parse(ExtractString(tokens[j + 1]));
                     else if (token == "\"floatwidth\"")
-                        robj.width = float.Parse(ExtractString(tokens[j + 1]));
+                        robj.whrInfo.x = float.Parse(ExtractString(tokens[j + 1]));
                     else if (token == "\"floatheight\"")
-                        robj.height = float.Parse(ExtractString(tokens[j + 1]));
+                        robj.whrInfo.y = float.Parse(ExtractString(tokens[j + 1]));
                     else
                     {
                         if (_debug)
@@ -346,14 +386,14 @@ public class Parser
                         }
                     }
                     else if (token == "\"colormap\"")
-                        robj.cmapName = ExtractString(tokens[++j]);
+                        robj.mattr.cmapName = ExtractString(tokens[++j]);
                     else if (token == "\"bumpmap\"")
-                        robj.bmapName = ExtractString(tokens[++j]);
+                        robj.mattr.bmapName = ExtractString(tokens[++j]);
                     else if (token == "\"colorKd\"")
-                        robj.kd = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
+                        robj.mattr.kd = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
                             , float.Parse(ExtractString(tokens[++j])));
                     else if (token == "\"colorKs\"")
-                        robj.ks = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
+                        robj.mattr.ks = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
                             , float.Parse(ExtractString(tokens[++j])));
                     else
                     {
@@ -368,7 +408,7 @@ public class Parser
             {
                 tokens = line.Split(' ');
                 robj.o_type = ObjectType.mesh;
-                robj.meshName = ExtractString(tokens[1]);
+                robj.mattr.meshName = Path.Combine(_rootFolder, ExtractString(tokens[1]));
             }
             else if (line.StartsWith(KeyWord.K_LightSource))
             {
@@ -400,9 +440,9 @@ public class Parser
                     else if (token == "\"integernsamples\"")
                         robj.nsample = int.Parse(ExtractString(tokens[++j]));
                     else if (token == "\"floatwidth\"")
-                        robj.width = float.Parse(ExtractString(tokens[++j]));
+                        robj.whrInfo.x = float.Parse(ExtractString(tokens[++j]));
                     else if (token == "\"floatheight\"")
-                        robj.height = float.Parse(ExtractString(tokens[++j]));
+                        robj.whrInfo.y = float.Parse(ExtractString(tokens[++j]));
                     else
                     {
                         if (_debug)
@@ -421,8 +461,20 @@ public class Parser
         return true;
     }
 
-    public bool Parse(string filePath)
+    private void Init()
     {
+        outputInfo.Init();
+        rayTracingInfo.Init();
+        _records.Clear();
+        _curIndex = 0;
+        _rootFolder = "";
+    }
+
+    public bool Parse(string rootFolder, string filePath)
+    {
+        Init();
+        _rootFolder = rootFolder;
+
         if (!ReadFile(filePath))
         {
             if (_debug)
@@ -459,5 +511,4 @@ public class Parser
 
         return true;
     }
-
 }
