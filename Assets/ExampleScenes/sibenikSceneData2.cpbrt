@@ -48,7 +48,7 @@ WorldBegin
 
 	#plane
 	AttributeBegin
-		Translate 0 0.6 0
+		Translate 3.5 0.6 0
 		Rotate 90 0 0 1
 		Material "color map" "sibenik/mramor6x6.png" "bump map" "sibenik/bump_mramor.png"
 		Shape "plane" "float width" [2.5] "float height" [2.0]
@@ -57,6 +57,7 @@ WorldBegin
 	#plane
 	AttributeBegin
 		Translate 8.5 2 0
+		Rotate 90 0 1 0
 		Material "mirror"
 		Shape "plane" "float width" [1.0] "float height" [2.0]
 	AttributeEnd
