@@ -43,7 +43,10 @@ public class UIManager : MonoBehaviour
 
     public void StartRender()
     {
-        
-        gm.StartRender(_parser.rayTracingInfo, _parser.outputInfo);
+        bool switchRenderType = true;
+        if(switchRenderType)
+            gm.StartRenderRect(_parser.rayTracingInfo, _parser.outputInfo);
+        else
+            gm.StartRender(_parser.rayTracingInfo, _parser.outputInfo);
     }
 }
