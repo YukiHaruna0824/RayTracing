@@ -109,6 +109,12 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    //recursive get color
+    private Color ShootRay(Ray r)
+    {
+        return new Color();
+    }
+
     public void ClearScene()
     {
         foreach(GameObject obj in _lightObjects)
@@ -121,7 +127,7 @@ public class GameManager : MonoBehaviour
 
     public void GenerateScene(RayTracingInfo rtInfo, OutputInfo outputInfo)
     {
-        //set screen resolution
+        //set screen resolution (not work in editing)
         Screen.SetResolution((int)outputInfo.Resolution.x, (int)outputInfo.Resolution.y, false);
 
         //set camera info
@@ -147,4 +153,40 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    public void StartRender(RayTracingInfo rtInfo, OutputInfo outputInfo)
+    {
+        int sample = rtInfo.sampleCount;
+        int sq_sample = (int)Mathf.Sqrt(sample);
+
+        // for test
+        Vector2 resol = new Vector2(20, 20);
+        //Vector2 resol = outputInfo.Resolution;
+        Vector2 scResol = new Vector2(Screen.width, Screen.height);
+
+        Vector2 ratio = new Vector2(scResol.x / resol.x, scResol.y / resol.y);
+        Vector2 s_ratio = new Vector2(ratio.x / sq_sample, ratio.y / sq_sample);
+
+        for (int w = 0; w < resol.x; w++)
+        {
+            for (int h = 0; h < resol.y; h++)
+            {
+                Vector2 rayPoint = new Vector2(w * ratio.x, h * ratio.y);
+                Color pixelColor = new Color(0, 0, 0);
+                for (int sw = 0; sw < sq_sample; sw++)
+                {
+                    for (int sh = 0; sh < sq_sample; sh++)
+                    {
+                        Vector2 scRayPoint = new Vector2(rayPoint.x + sw * s_ratio.x, rayPoint.y + sh * s_ratio.y);
+                        Ray ray = cam.ScreenPointToRay(scRayPoint);
+                        // box filter
+                        pixelColor += ShootRay(ray) / sample;
+                    }
+                }
+                // give current pixel color
+                /*
+                 
+                */
+            }
+        }
+    }
 }

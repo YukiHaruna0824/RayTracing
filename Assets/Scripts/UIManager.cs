@@ -40,4 +40,9 @@ public class UIManager : MonoBehaviour
             gm.GenerateScene(_parser.rayTracingInfo, _parser.outputInfo);
         }
     }
+
+    public void StartRender()
+    {
+        gm.StartRender(_parser.rayTracingInfo, _parser.outputInfo);
+    }
 }
