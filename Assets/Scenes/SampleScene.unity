@@ -713,7 +713,7 @@ MonoBehaviour:
   cam: {fileID: 963194227}
   um: {fileID: 1854598140}
   model: {fileID: 7167296611514777840, guid: 0debd52570f9dcd49b3d8c2db90f8de0, type: 3}
-  cone: {fileID: -927199367670048503, guid: 143c9261f582acc4e88a857b7df38e54, type: 3}
+  cone: {fileID: 8303972465780526013, guid: ec02afe6052aa7e43a603c674e0a9ccb, type: 3}
 --- !u!4 &1938853012
 Transform:
   m_ObjectHideFlags: 0
