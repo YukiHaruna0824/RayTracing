@@ -15,11 +15,21 @@ public class GameManager : MonoBehaviour
     private List<GameObject> _lightObjects = new List<GameObject>();
     private List<GameObject> _objects = new List<GameObject>();
 
+    Texture2D tex;
+    Rect rect = new Rect(0, 0, 0, 0);
 
     private bool _hidePanel = true;
 
+    private void OnGUI()
+    {
+        if (rect.width != 0 && rect.height != 0)
+            GUI.DrawTexture(rect, tex);
+    }
+
     private void Update()
     {
+        if (rect.width != 0 && rect.height != 0)
+            tex.Apply();
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             _hidePanel = !_hidePanel;
@@ -109,12 +119,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    //recursive get color
-    private Color ShootRay(Ray r)
-    {
-        return new Color();
-    }
-
     public void ClearScene()
     {
         foreach(GameObject obj in _lightObjects)
@@ -153,8 +157,15 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    //recursive get color
+    private Color ShootRay(Ray r)
+    {
+        return new Color(1,1,0);
+    }
+
     public void StartRender(RayTracingInfo rtInfo, OutputInfo outputInfo)
     {
+
         int sample = rtInfo.sampleCount;
         int sq_sample = (int)Mathf.Sqrt(sample);
 
@@ -166,6 +177,8 @@ public class GameManager : MonoBehaviour
         Vector2 ratio = new Vector2(scResol.x / resol.x, scResol.y / resol.y);
         Vector2 s_ratio = new Vector2(ratio.x / sq_sample, ratio.y / sq_sample);
 
+        rect = new Rect(0, 0, resol.x, resol.y);
+        tex = new Texture2D((int)rect.width, (int)rect.height, TextureFormat.RGB24, false);
         for (int w = 0; w < resol.x; w++)
         {
             for (int h = 0; h < resol.y; h++)
@@ -182,11 +195,51 @@ public class GameManager : MonoBehaviour
                         pixelColor += ShootRay(ray) / sample;
                     }
                 }
+                TextureHelper.SetPixel(tex, w, h, pixelColor);
                 // give current pixel color
                 /*
                  
                 */
             }
         }
+        TextureHelper.SaveImg(tex, "Img/output.png");
+    }
+
+    public void StartRenderRect(RayTracingInfo rtInfo, OutputInfo outputInfo)
+    {
+
+        int sample = rtInfo.sampleCount;
+        int sq_sample = (int)Mathf.Sqrt(sample);
+
+        rect = new Rect(200, 200, 400, 400);
+ 
+        Vector2 s_ratio = new Vector2(1f / sq_sample, 1f / sq_sample);
+
+        tex = new Texture2D((int)rect.width, (int)rect.height, TextureFormat.RGB24, false);
+        for (int w = (int)rect.x; w < (int)rect.x + rect.width; w++) 
+        {
+            for (int h = (int)rect.y; h < (int)rect.y + rect.height; h++)
+            {
+                Vector2 rayPoint = new Vector2(w, h);
+                Color pixelColor = new Color(0, 0, 0);
+                for (int sw = 0; sw < sq_sample; sw++)
+                {
+                    for (int sh = 0; sh < sq_sample; sh++)
+                    {
+                        Vector2 scRayPoint = new Vector2(rayPoint.x + sw * s_ratio.x, rayPoint.y + sh * s_ratio.y);
+                        Ray ray = cam.ScreenPointToRay(scRayPoint);
+                        // box filter
+                        pixelColor += ShootRay(ray) / sample;
+                    }
+                }
+                TextureHelper.SetPixel(tex, w, h, pixelColor);
+                // give current pixel color
+                /*
+                 
+                */
+            }
+        }
+
+        TextureHelper.SaveImg(tex, "Img/output.png");
     }
 }
