@@ -386,15 +386,27 @@ public class Parser
                         }
                     }
                     else if (token == "\"colormap\"")
-                        robj.mattr.cmapName = ExtractString(tokens[++j]);
+                    {
+                        robj.m_type = MaterialType.map;
+                        robj.mattr.cmapName = Path.Combine(_rootFolder, ExtractString(tokens[++j]));
+                    }
                     else if (token == "\"bumpmap\"")
-                        robj.mattr.bmapName = ExtractString(tokens[++j]);
+                    {
+                        robj.m_type = MaterialType.map;
+                        robj.mattr.bmapName = Path.Combine(_rootFolder, ExtractString(tokens[++j]));
+                    }
                     else if (token == "\"colorKd\"")
+                    {
+                        robj.m_type = MaterialType.kdks;
                         robj.mattr.kd = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
                             , float.Parse(ExtractString(tokens[++j])));
+                    }
                     else if (token == "\"colorKs\"")
+                    {
+                        robj.m_type = MaterialType.kdks;
                         robj.mattr.ks = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
                             , float.Parse(ExtractString(tokens[++j])));
+                    }
                     else
                     {
                         if (_debug)

@@ -43,6 +43,7 @@ public class UIManager : MonoBehaviour
 
     public void StartRender()
     {
+        
         gm.StartRender(_parser.rayTracingInfo, _parser.outputInfo);
     }
 }
