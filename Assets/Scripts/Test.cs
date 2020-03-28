@@ -19,9 +19,10 @@ public class Test : MonoBehaviour
             Texture2D tex = hit.transform.GetComponent<MeshRenderer>().material.mainTexture as Texture2D;
             Vector2 pixelUV = hit.textureCoord;
             print(pixelUV);
+
             pixelUV.x *= tex.width;
             pixelUV.y *= tex.height;
-
+            tex.GetPixel((int)pixelUV.x, (int)pixelUV.y);
             tex.SetPixel((int)pixelUV.x, (int)pixelUV.y, Color.black);
             tex.Apply();
         }

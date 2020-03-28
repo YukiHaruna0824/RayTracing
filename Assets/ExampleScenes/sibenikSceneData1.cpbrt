@@ -62,11 +62,6 @@ WorldBegin
 		Shape "plane" "float width" [1.0] "float height" [2.0]
 	AttributeEnd
 
-	#import obj
-	AttributeBegin
-		Translate 0 7.655 0
-		Scale 0.5 0.5 0.5
-		Include "sibenik/sibenik.obj"
-	AttributeEnd	
+	
 	
 WorldEnd

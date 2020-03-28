@@ -41,6 +41,11 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    public void ToggleImage()
+    {
+        gm.ToggleImage();
+    }
+
     public void StartRender()
     {
         bool switchRenderType = true;
