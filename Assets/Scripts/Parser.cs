@@ -444,8 +444,8 @@ public class Parser
                         j++;
                     }
                     else if (token == "\"colorL\"")
-                        robj.lightColor = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
-                            , float.Parse(ExtractString(tokens[++j])));
+                        robj.lightColor = new Vector3(float.Parse(ExtractString(tokens[++j]))/15f, float.Parse(tokens[++j])/15f
+                            , float.Parse(ExtractString(tokens[++j]))/15f);
                     else if (token == "\"pointfrom\"")
                         robj.pos = new Vector3(float.Parse(ExtractString(tokens[++j])), float.Parse(tokens[++j])
                             , float.Parse(ExtractString(tokens[++j])));
