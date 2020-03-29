@@ -24,9 +24,9 @@ public class GameManager : MonoBehaviour
 
     private bool _hidePanel = true;
 
-    float[] depthValue = new float[] { 0.9f, 0.09f, 0.009f,0.0009f };
+    float[] depthValue = new float[] { 0.96f, 0.03f, 0.0003f,0.0003f };
 
-    short[] matIndex;
+    byte[] matIndex;
 
     private Color ToColor(Vector3 v)
     {
@@ -227,9 +227,10 @@ public class GameManager : MonoBehaviour
 
         Material[] mats = hit.transform.GetComponent<MeshRenderer>().sharedMaterials;
         Vector3 mapColor = new Vector3(0, 0, 0);
-        if (mats[matIndex[triangleIdx]].mainTexture != null)
+        Texture2D matTex = mats[matIndex[triangleIdx]].mainTexture as Texture2D;
+        if (matTex != null)
         {
-            mapColor = ToVector(tex.GetPixelBilinear(hit.textureCoord.x, hit.textureCoord.y) * mats[matIndex[triangleIdx]].color);
+            mapColor = ToVector(matTex.GetPixelBilinear(hit.textureCoord.x, hit.textureCoord.y) * mats[matIndex[triangleIdx]].color);
         }
         else if (mats[matIndex[triangleIdx]].color != null)
             mapColor = ToVector(mats[matIndex[triangleIdx]].color);
@@ -251,6 +252,7 @@ public class GameManager : MonoBehaviour
         RaycastHit shadowHit;
         if (Physics.Raycast(shadowRay, out shadowHit, lv.magnitude*0.9999f)) 
         {
+            if(_objects[shadowHit.transform.gameObject].m_type!=MaterialType.glass)
             //Debug.Log(shadowHit.transform.gameObject.name);
             return true;
         }
@@ -258,7 +260,27 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
-    private bool Scatter(ref Ray ray, ref RaycastHit hit, ref Color albedo, ref Ray scattered,ref int depth,ref int reflCount)
+    public bool Refract(Vector3 v, Vector3 n, float ni_over_nt, out Vector3 outRefracted)
+    {
+        float dt = Vector3.Dot(-v.normalized, n.normalized);
+        float discrement = 1.0f - ni_over_nt * ni_over_nt * (1.0f - dt * dt);
+        if (discrement > 0)
+        {
+            outRefracted = ni_over_nt * (v.normalized - n * dt) - n * Mathf.Sqrt(discrement);
+            return true;
+        }
+        outRefracted = new Vector3(0, 0, 0);
+        return false;
+    }
+
+    public float Schlick(float cosine, float ri)
+    {
+        float r0 = (1 - ri) / (1 + ri);
+        r0 = r0 * r0;
+        return r0 + (1 - r0) * Mathf.Pow(1 - cosine, 5);
+    }
+
+    private bool Scatter(ref Ray ray, ref RaycastHit hit, ref Color albedo, ref Ray scattered,ref int depth,ref int reflCount,ref bool RayFromGlass,ref Collider GlassCollider)
     {
 
         RayTracingObject hitObject = _objects[hit.transform.gameObject];
@@ -271,6 +293,60 @@ public class GameManager : MonoBehaviour
             albedo = new Color(0, 0, 0);
             return Vector3.Dot(scattered.direction, hit.normal) > 0;
         }
+        else if (hitObject.m_type == MaterialType.glass)
+        {
+            float refractRate = 1.5f;
+            Vector3 outwardNormal;
+            Vector3 rdir = ray.direction.normalized;
+            Vector3 reflect = Vector3.Reflect(rdir.normalized, hit.normal.normalized);
+            float ni_over_nt;
+            albedo = new Color(0, 0, 0);
+            Vector3 refract;
+            float reflectProbe;
+            float cosine;
+            if (Vector3.Dot(rdir, hit.normal) > 0)
+            {
+                outwardNormal = -hit.normal.normalized;
+                ni_over_nt = refractRate;
+                cosine = refractRate * Vector3.Dot(rdir, hit.normal.normalized);
+            }
+            else
+            {
+                outwardNormal = hit.normal.normalized;
+                ni_over_nt = 1.0f / refractRate;
+                cosine = -Vector3.Dot(rdir, hit.normal.normalized);
+            }
+
+            if (Refract(rdir, outwardNormal, ni_over_nt, out refract))
+            {
+                reflectProbe = Schlick(cosine, refractRate);
+            }
+            else
+            {
+                reflectProbe = 1;
+            }
+
+            if (Random.Range(0, 1) < reflectProbe)
+            {
+                scattered = new Ray(hit.point, reflect.normalized);
+            }
+            else
+            {
+                if (RayFromGlass == false)
+                {
+                    scattered = new Ray(hit.point, refract.normalized);
+                    GlassCollider = hit.transform.gameObject.GetComponent<Collider>();
+                    RayFromGlass = true;
+                }
+                else if (RayFromGlass == true) 
+                {
+                    scattered = new Ray(hit.point, refract.normalized);
+                    GlassCollider = null;
+                    RayFromGlass = false;
+                }
+            }
+            return true;
+        }
         else if (hitObject.m_type == MaterialType.none) 
         {
             Vector3 target = hit.normal.normalized * 0.5f +
@@ -280,7 +356,6 @@ public class GameManager : MonoBehaviour
             scattered.direction = target - hit.point;
             //attenuation = ToColor(hitObject.mattr.kd);
 
-            bool firstCal = true;
             Vector3 mapColor = new Vector3(0, 0, 0);
             foreach (GameObject lObj in _lightObjects.Keys)
             {
@@ -289,11 +364,7 @@ public class GameManager : MonoBehaviour
                 // Check if the point is in a shadow
                 if (!isInShadow(ref rObj.pos, ref hit))
                 {
-                    if (firstCal)
-                    {
-                        mapColor = getModelColor(ref hit);
-                        firstCal = false;
-                    }
+                    mapColor = getModelColor(ref hit);
                     Vector3 light = rObj.pos - hit.point;
 
                     float distance = light.magnitude;
@@ -400,18 +471,34 @@ public class GameManager : MonoBehaviour
     }
 
     //recursive get color
-    private Color RayTrace(Ray ray, int depth,ref int reflCount)
+    private Color RayTrace(Ray ray, int depth,ref int reflCount,ref bool RayFromGlass,ref Collider GlassCollider)
     {
         RaycastHit hit;
-        if (Physics.Raycast(ray, out hit, 100))
+        bool rayHit = false;
+        
+        if (RayFromGlass == false)
+        {
+            rayHit = Physics.Raycast(ray, out hit, 100);
+        }
+        else
+        {
+            Vector3 Origin = ray.origin;
+            ray.origin = ray.GetPoint(80);
+            ray.direction = -ray.direction;
+            rayHit = GlassCollider.Raycast(ray, out hit, 100);
+            ray.direction = -ray.direction;
+            ray.origin = Origin;
+        }
+
+        if (rayHit)
         {
             Ray scattered = new Ray();
             Color albedo = new Color(0,0,0);
 
-            if (Scatter(ref ray, ref hit, ref albedo, ref scattered,ref depth,ref reflCount)) 
+            if (Scatter(ref ray, ref hit, ref albedo, ref scattered,ref depth,ref reflCount,ref RayFromGlass, ref GlassCollider)) 
             {
                 if (depth < 2)
-                    return albedo + RayTrace(scattered, depth + 1,ref reflCount);// * Mathf.Pow(0.2f, depth);
+                    return albedo + RayTrace(scattered, depth + 1,ref reflCount,ref RayFromGlass,ref GlassCollider);
                 else
                     return albedo;
             }
@@ -441,15 +528,13 @@ public class GameManager : MonoBehaviour
             {
 
                 Mesh mesh = obj.transform.GetComponent<MeshFilter>().mesh;
-                matIndex = new short[mesh.triangles.Length / 3];
+                matIndex = new byte[mesh.triangles.Length / 3];
                 int subMeshesNr = mesh.subMeshCount;
-                int materialIdx = -1;
-
-                for (int k = 0; k < mesh.triangles.Length / 3; k++)
+ 
+                for (int k = 0; k < mesh.triangles.Length/3; k++)
                 {
-                    
+                    int materialIdx = -1;
                     int[] hittedTriangle = new int[] { mesh.triangles[k * 3], mesh.triangles[k * 3 + 1], mesh.triangles[k * 3 + 2] };
-
 
                     for (int i = 0; i < subMeshesNr; i++)
                     {
@@ -459,13 +544,12 @@ public class GameManager : MonoBehaviour
                             if (tr[j] == hittedTriangle[0] && tr[j + 1] == hittedTriangle[1] && tr[j + 2] == hittedTriangle[2])
                             {
                                 materialIdx = i;
-                                //Debug.Log(materialIdx);
                                 break;
                             }
                         }
                         if (materialIdx != -1) break;
                     }
-                    matIndex[k] = (short)materialIdx;
+                    matIndex[k] = (byte)materialIdx;
                 }
             }
         }
@@ -502,7 +586,9 @@ public class GameManager : MonoBehaviour
                         Vector2 scRayPoint = new Vector2(rayPoint.x + sw * s_ratio.x, rayPoint.y + sh * s_ratio.y);
                         Ray ray = cam.ScreenPointToRay(scRayPoint);
                         // box filter
-                        pixelColor += RayTrace(ray,0,ref reflCount) / sample;
+                        bool RayFromGlass = false;
+                        Collider GlassCollider=null;
+                        pixelColor += RayTrace(ray, 0, ref reflCount,ref RayFromGlass,ref GlassCollider) / sample;
                     }
                 }
                 TextureHelper.SetPixel(tex, w, h, pixelColor);
@@ -518,23 +604,25 @@ public class GameManager : MonoBehaviour
     public void StartRenderRect(RayTracingInfo rtInfo, OutputInfo outputInfo)
     {
         Debug.Log("Started!");
-        PreprocessModelMaterial();
+        matIndex = File.ReadAllBytes(Path.Combine(Application.dataPath, "ModelData.bin"));
+        //PreprocessModelMaterial();
+        //File.WriteAllBytes(Path.Combine(Application.dataPath, "ModelData.bin"), matIndex);
         Debug.Log("Model Preprocessed!");
 
         int sample = rtInfo.sampleCount;
         int sq_sample = (int)Mathf.Sqrt(sample);
 
-        int width = 300;
-        int height = 300;
+        int width = 800;
+        int height = 800;
         //rect = new Rect(10, 100, 1, 1);
         rect = new Rect((800 - width) / 2, (800 - height) / 2, width, height);
- 
+
         Vector2 s_ratio = new Vector2(1f / sq_sample, 1f / sq_sample);
 
         tex = new Texture2D((int)rect.width, (int)rect.height, TextureFormat.RGB24, false);
 
-        int total = (int)(rect.width*rect.height);
-        for (int w = (int)rect.x; w < (int)rect.x + rect.width; w++) 
+        int total = (int)(rect.width * rect.height);
+        for (int w = (int)rect.x; w < (int)rect.x + rect.width; w++)
         {
             for (int h = (int)rect.y; h < (int)rect.y + rect.height; h++)
             {
@@ -549,7 +637,9 @@ public class GameManager : MonoBehaviour
                         Vector2 scRayPoint = new Vector2(rayPoint.x + sw * s_ratio.x, rayPoint.y + sh * s_ratio.y);
                         Ray ray = cam.ScreenPointToRay(scRayPoint);
                         // box filter
-                        pixelColor += RayTrace(ray,0,ref reflCount) / sample;
+                        bool RayFromGlass = false;
+                        Collider GlassCollider = null;
+                        pixelColor += RayTrace(ray, 0, ref reflCount, ref RayFromGlass, ref GlassCollider) / sample;
                     }
                 }
                 TextureHelper.SetPixel(tex, w - (int)rect.x, h - (int)rect.y, pixelColor);

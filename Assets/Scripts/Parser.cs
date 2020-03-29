@@ -44,7 +44,7 @@ public enum LightType
 
 public enum MaterialType
 {
-    none, mirror, map, kdks
+    none, mirror, map, kdks, glass
 }
 
 public class MaterialAttribute
@@ -382,6 +382,11 @@ public class Parser
                         if (tokens[j + 1] == "\"mirror\"")
                         {
                             robj.m_type = MaterialType.mirror;
+                            j++;
+                        }
+                        else if (tokens[j + 1] == "\"glass\"")
+                        {
+                            robj.m_type = MaterialType.glass;
                             j++;
                         }
                     }
