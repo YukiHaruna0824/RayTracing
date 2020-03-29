@@ -236,9 +236,7 @@ public class GameManager : MonoBehaviour
     {
         Vector3 lv = hit.point - light_pos;
         if (Vector3.Dot(-lv, hit.normal) < 0)
-        {
             return false;
-        }
 
         Ray shadowRay = new Ray(light_pos, lv);
 
@@ -284,21 +282,21 @@ public class GameManager : MonoBehaviour
             RayTracingObject hitObject = _objects[hit.transform.gameObject];
             Vector3[] lightSamplePoint = SampleLightPoint(lightObj);
 
-            //int outShadowCount = 0;
             foreach(Vector3 lightPos in lightSamplePoint)
             {
                 if(!isInShadow(lightPos, ref hit))
                 {
-                    //outShadowCount++;
                     Vector3 light = lightPos - hit.point;
                     Vector3 light_norm = Vector3.Normalize(light);
 
                     Vector3 halfDir = Vector3.Normalize(-ray.direction + light_norm);
                     float diffuse_scalar = Mathf.Max(0, Vector3.Dot(light_norm, hit.normal));
                     float specular_scalar = Mathf.Pow(Mathf.Max(0, Vector3.Dot(halfDir, hit.normal)), 6);
+
                     if(hitObject.m_type == MaterialType.none)
                     {
-
+                        Vector3 mapColor = getModelColor(ref hit);
+                        albedo += ToColor(lightObj.lightColor) * ToColor(diffuse_scalar * mapColor);
                     }
                     else if(hitObject.m_type == MaterialType.map)
                     {
@@ -313,14 +311,12 @@ public class GameManager : MonoBehaviour
                     }
                 }
             }
-            
             albedo /= lightSamplePoint.Length;
         }
     }
 
     private bool Scatter(ref Ray ray, ref RaycastHit hit, ref Color albedo, ref Ray scattered,ref int depth,ref int reflCount)
     {
-
         RayTracingObject hitObject = _objects[hit.transform.gameObject];
         if (hitObject.m_type == MaterialType.mirror)
         {
@@ -339,31 +335,7 @@ public class GameManager : MonoBehaviour
             scattered.origin = hit.point;
             scattered.direction = target - hit.point;
 
-            bool firstCal = true;
-            Vector3 mapColor = new Vector3(0, 0, 0);
-            foreach (GameObject lObj in _lightObjects.Keys)
-            {
-                RayTracingObject rObj = _lightObjects[lObj];
-
-                // Check if the point is in a shadow
-                if (!isInShadow(rObj.pos, ref hit))
-                {
-                    if (firstCal)
-                    {
-                        mapColor = getModelColor(ref hit);
-                        firstCal = false;
-                    }
-                    Vector3 light = rObj.pos - hit.point;
-                    Vector3 light_norm = Vector3.Normalize(light);
-
-
-                    Vector3 halfDir = Vector3.Normalize(-ray.direction + light_norm);
-                    float diffuse_scalar = Mathf.Max(0, Vector3.Dot(light_norm, hit.normal));
-
-                    albedo += ToColor(rObj.lightColor) * ToColor(diffuse_scalar * mapColor);
-                }
-            }
-
+            CheckShadowRay(ref ray, ref hit, ref albedo);
             albedo *= depthValue[reflCount++];
 
             return true;
@@ -410,7 +382,7 @@ public class GameManager : MonoBehaviour
 
             if (Scatter(ref ray, ref hit, ref albedo, ref scattered,ref depth,ref reflCount)) 
             {
-                if (depth < 1)
+                if (depth < 2)
                     return albedo + RayTrace(scattered, depth + 1,ref reflCount);// * Mathf.Pow(0.2f, depth);
                 else
                     return albedo;
@@ -438,17 +410,14 @@ public class GameManager : MonoBehaviour
 
             if (rObj.m_type == MaterialType.none)
             {
-
                 Mesh mesh = obj.transform.GetComponent<MeshFilter>().mesh;
                 matIndex = new short[mesh.triangles.Length / 3];
                 int subMeshesNr = mesh.subMeshCount;
-                int materialIdx = -1;
 
                 for (int k = 0; k < mesh.triangles.Length / 3; k++)
                 {
-                    
+                    int materialIdx = -1;
                     int[] hittedTriangle = new int[] { mesh.triangles[k * 3], mesh.triangles[k * 3 + 1], mesh.triangles[k * 3 + 2] };
-
 
                     for (int i = 0; i < subMeshesNr; i++)
                     {
@@ -505,10 +474,6 @@ public class GameManager : MonoBehaviour
                     }
                 }
                 TextureHelper.SetPixel(tex, w, h, pixelColor);
-                // give current pixel color
-                /*
-                 
-                */
             }
         }
         TextureHelper.SaveImg(tex, "Img/output.png");

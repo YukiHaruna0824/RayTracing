@@ -3,7 +3,7 @@ Film "image"
 	"integer xresolution" [800] "integer yresolution" [800]
 	"string filename" "sibenik-whitted.png"
 
-Sampler "integer pixelsamples" [16]
+Sampler "integer pixelsamples" [9]
 
 # persp & ortho
 LookAt 0 3.5 0.0635 4.3 0.6 0 0 1 0 
