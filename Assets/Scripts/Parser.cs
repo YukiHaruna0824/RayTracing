@@ -92,7 +92,7 @@ public class RayTracingObject
     //for light
     public Vector3 lightColor;
 
-    //for area
+    //for area light
     public int nsample;
 
     public RayTracingObject()
