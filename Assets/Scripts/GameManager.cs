@@ -219,41 +219,16 @@ public class GameManager : MonoBehaviour
 
     Vector3 getModelColor(ref RaycastHit hit)
     {
-
-        Mesh meshHit = hit.transform.GetComponent<MeshFilter>().mesh;
-
         int triangleIdx = hit.triangleIndex;
-        int subMeshesNr = meshHit.subMeshCount;
-        int materialIdx = -1;
 
-        int[] hittedTriangle = new int[]
-        {
-                meshHit.triangles[triangleIdx * 3],
-                meshHit.triangles[triangleIdx * 3 + 1],
-                meshHit.triangles[triangleIdx * 3 + 2]
-        };
-        for (int i = 0; i < subMeshesNr; i++)
-        {
-            int[] tr = meshHit.GetTriangles(i);
-            for (int j = 0; j < tr.Length-2; j++)
-            {
-                if (tr[j] == hittedTriangle[0] && tr[j + 1] == hittedTriangle[1] && tr[j + 2] == hittedTriangle[2])
-                {
-                    materialIdx = i;
-                    //Debug.Log(materialIdx);
-                    break;
-                }
-            }
-            if (materialIdx != -1) break;
-        }
         Material[] mats = hit.transform.GetComponent<MeshRenderer>().sharedMaterials;
         Vector3 mapColor = new Vector3(0, 0, 0);
-        if (mats[materialIdx].mainTexture != null)
+        if (mats[matIndex[triangleIdx]].mainTexture != null)
         {
-            mapColor = ToVector(tex.GetPixelBilinear(hit.textureCoord.x, hit.textureCoord.y) * mats[materialIdx].color);
+            mapColor = ToVector(tex.GetPixelBilinear(hit.textureCoord.x, hit.textureCoord.y) * mats[matIndex[triangleIdx]].color);
         }
-        else if (mats[materialIdx].color != null)
-            mapColor = ToVector(mats[materialIdx].color);
+        else if (mats[matIndex[triangleIdx]].color != null)
+            mapColor = ToVector(mats[matIndex[triangleIdx]].color);
         return mapColor;
     }
 
@@ -455,58 +430,45 @@ public class GameManager : MonoBehaviour
         //return new Color(0.5f, 0.9f, 1.0f);
     }
 
-    //public void PreProcessModelMaterial()
-    //{
-    //    foreach (GameObject obj in _objects.Keys)
-    //    {
-    //        RayTracingObject rObj = _objects[obj];
+    public void PreprocessModelMaterial()
+    {
+        foreach (GameObject obj in _objects.Keys)
+        {
+            RayTracingObject rObj = _objects[obj];
 
-    //        if (rObj.m_type == MaterialType.none)
-    //        {
+            if (rObj.m_type == MaterialType.none)
+            {
 
-    //            Mesh mesh = obj.transform.GetComponent<MeshFilter>().mesh;
-    //            matIndex = new short[mesh.triangles.Length / 3];
-    //            int triangleIdx = hit.triangleIndex;
-    //            int subMeshesNr = mesh.subMeshCount;
-    //            int materialIdx = -1;
+                Mesh mesh = obj.transform.GetComponent<MeshFilter>().mesh;
+                matIndex = new short[mesh.triangles.Length / 3];
+                int subMeshesNr = mesh.subMeshCount;
+                int materialIdx = -1;
 
-    //            for (int i = 0; i < mesh.triangles.Length / 3; i++)
-    //            {
+                for (int k = 0; k < mesh.triangles.Length / 3; k++)
+                {
+                    
+                    int[] hittedTriangle = new int[] { mesh.triangles[k * 3], mesh.triangles[k * 3 + 1], mesh.triangles[k * 3 + 2] };
 
-    //            }
-    //            int[] hittedTriangle = new int[]
-    //            {
 
-    //            meshHit.triangles[triangleIdx * 3],
-    //            meshHit.triangles[triangleIdx * 3 + 1],
-    //            meshHit.triangles[triangleIdx * 3 + 2]
-    //            };
-    //            for (int i = 0; i < subMeshesNr; i++)
-    //            {
-    //                int[] tr = meshHit.GetTriangles(i);
-    //                for (int j = 0; j < tr.Length - 2; j++)
-    //                {
-    //                    if (tr[j] == hittedTriangle[0] && tr[j + 1] == hittedTriangle[1] && tr[j + 2] == hittedTriangle[2])
-    //                    {
-    //                        materialIdx = i;
-    //                        //Debug.Log(materialIdx);
-    //                        break;
-    //                    }
-    //                }
-    //                if (materialIdx != -1) break;
-    //            }
-    //            Material[] mats = hit.transform.GetComponent<MeshRenderer>().sharedMaterials;
-    //            Vector3 mapColor = new Vector3(0, 0, 0);
-    //            if (mats[materialIdx].mainTexture != null)
-    //            {
-    //                mapColor = ToVector(tex.GetPixelBilinear(hit.textureCoord.x, hit.textureCoord.y) * mats[materialIdx].color);
-    //            }
-    //            else if (mats[materialIdx].color != null)
-    //                mapColor = ToVector(mats[materialIdx].color);
-    //            matIndex = new
-    //        }
-    //    }
-    //}
+                    for (int i = 0; i < subMeshesNr; i++)
+                    {
+                        int[] tr = mesh.GetTriangles(i);
+                        for (int j = 0; j < tr.Length - 2; j++)
+                        {
+                            if (tr[j] == hittedTriangle[0] && tr[j + 1] == hittedTriangle[1] && tr[j + 2] == hittedTriangle[2])
+                            {
+                                materialIdx = i;
+                                //Debug.Log(materialIdx);
+                                break;
+                            }
+                        }
+                        if (materialIdx != -1) break;
+                    }
+                    matIndex[k] = (short)materialIdx;
+                }
+            }
+        }
+    }
 
     public void StartRender(RayTracingInfo rtInfo, OutputInfo outputInfo)
     {
@@ -554,8 +516,9 @@ public class GameManager : MonoBehaviour
 
     public void StartRenderRect(RayTracingInfo rtInfo, OutputInfo outputInfo)
     {
-        //meshHit.triangles.Length;
-        //PreprocessModelMaterial();
+        Debug.Log("Started!");
+        PreprocessModelMaterial();
+        Debug.Log("Model Preprocessed!");
 
         int sample = rtInfo.sampleCount;
         int sq_sample = (int)Mathf.Sqrt(sample);
@@ -590,6 +553,7 @@ public class GameManager : MonoBehaviour
                 TextureHelper.SetPixel(tex, w - (int)rect.x, h - (int)rect.y, pixelColor);
             }
         }
+        Debug.Log("Finished!");
 
         TextureHelper.SaveImg(tex, "Img/output.png");
     }
