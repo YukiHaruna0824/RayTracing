@@ -12,9 +12,6 @@ public class GameManager : MonoBehaviour
     public GameObject model;
     public GameObject cone;
 
-
-    //private List<GameObject> _lightObjects = new List<GameObject>();
-    //private List<GameObject> _objects = new List<GameObject>();
     private Dictionary<GameObject, RayTracingObject> _lightObjects = new Dictionary<GameObject, RayTracingObject>();
     private Dictionary<GameObject, RayTracingObject> _objects = new Dictionary<GameObject, RayTracingObject>();
 
@@ -323,14 +320,14 @@ public class GameManager : MonoBehaviour
     public bool Refract(Vector3 v, Vector3 n, float ni_over_nt, out Vector3 outRefracted)
     {
         float dt = Vector3.Dot(-v.normalized, n.normalized);
-        float discrement = 1.0f - ni_over_nt * ni_over_nt * (1.0f - dt * dt);
-        if (discrement > 0)
-        {
-            outRefracted = ni_over_nt * (v.normalized - n * dt) - n * Mathf.Sqrt(discrement);
+        //float discrement = 1.0f - ni_over_nt * ni_over_nt * (1.0f - dt * dt);
+        //if (discrement > 0)
+        //{
+            outRefracted = ni_over_nt * (v.normalized - n * dt) - n;
             return true;
-        }
-        outRefracted = new Vector3(0, 0, 0);
-        return false;
+        //}
+        //outRefracted = new Vector3(0, 0, 0);
+        //return false;
     }
 
     public float Schlick(float cosine, float ri)
@@ -355,7 +352,7 @@ public class GameManager : MonoBehaviour
         }
         else if (hitObject.m_type == MaterialType.glass)
         {
-            float refractRate = 1.5f;
+            float refractRate = 1 / 1.5f;
             Vector3 outwardNormal;
             Vector3 rdir = ray.direction.normalized;
             Vector3 reflect = Vector3.Reflect(rdir.normalized, hit.normal.normalized);
@@ -386,12 +383,12 @@ public class GameManager : MonoBehaviour
                 reflectProbe = 1;
             }
 
-            if (Random.Range(0, 1) < reflectProbe)
-            {
-                scattered = new Ray(hit.point, reflect.normalized);
-            }
-            else
-            {
+            //if (Random.Range(0, 1) < reflectProbe)
+            //{
+            //    scattered = new Ray(hit.point, reflect.normalized);
+            //}
+            //else
+            //{
                 if (RayFromGlass == false)
                 {
                     scattered = new Ray(hit.point, refract.normalized);
@@ -404,7 +401,7 @@ public class GameManager : MonoBehaviour
                     GlassCollider = null;
                     RayFromGlass = false;
                 }
-            }
+            //}
             return true;
         }
         else if (hitObject.m_type == MaterialType.none) 
